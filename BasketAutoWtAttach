@@ -1,0 +1,730 @@
+package org.firstinspires.ftc.teamcode.Autos;
+
+import androidx.annotation.NonNull;
+import com.acmerobotics.dashboard.config.Config;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.ParallelAction;
+import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.ProfileAccelConstraint;
+import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
+import com.acmerobotics.roadrunner.TranslationalVelConstraint;
+import com.acmerobotics.roadrunner.Vector2d;
+import com.acmerobotics.roadrunner.ftc.Actions;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.ColorSensor;
+import com.qualcomm.robotcore.hardware.DcMotor;
+
+import org.firstinspires.ftc.teamcode.MecanumDrive;
+
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.TouchSensor;
+
+@Config
+@Autonomous(name = "WheezyOuttaHere", group = "Autonomous")
+public class testBasketAttach extends LinearOpMode {
+
+    final int sampleDeposit = 3000;
+    final int extendPos = 350; //fucked
+    final int postHangPos = 520;
+    final int preHangPos = 200;
+    final int extension = 600;
+    private double redValue;
+    private double blueValue;
+
+
+    public class Attachments {
+        private DcMotor rightLift, leftLift, hort, intake;
+        private Servo claw, extendDepo, tiltDepo, intakeTilt, wristClaw, holdChute;
+
+        private TouchSensor vertLimit, hortLimit;
+        private ColorSensor colorChute, blockDetect;
+
+        private long intakeStartTime;
+        private static final long INTAKE_RUN_TIME = 2000;
+
+
+        public void intakeReset() {
+
+            intakeTilt.setPosition(0.4);
+        }
+
+        public void intakePickPos() {
+
+            intakeTilt.setPosition(0.32);//0.61
+        }
+
+        public void backPos(){
+            intakeTilt.setPosition(0.45);
+        }
+
+        public void intakeSpit() {
+
+            intakeTilt.setPosition(0.49);//0.61
+        } //0.71
+
+        public void OpenClaw() {
+
+            claw.setPosition(0.6);;//0.42
+        }
+
+        public void CloseClaw() {
+
+            claw.setPosition(0.15);
+        }
+
+        public void specPos() {
+            tiltDepo.setPosition(0.1);//0.07
+            wristClaw.setPosition(0.82); //0.8
+            extendDepo.setPosition(0.63);//0.645
+        }
+
+        public void depoCeiling() {
+            extendDepo.setPosition(0.71);
+            tiltDepo.setPosition(0.49);
+
+        }
+
+        public void depositPos() {
+            tiltDepo.setPosition(0.7);
+            extendDepo.setPosition(0.71);
+            //wristClaw.setPosition(0.4);
+        }
+
+        public void pickSpecPos() {
+            tiltDepo.setPosition(0.825);
+            extendDepo.setPosition(0.93);
+            wristClaw.setPosition(0.0);
+        }
+
+        public void resetPos() {
+            tiltDepo.setPosition(0.116);//0.11
+            wristClaw.setPosition(0.79); //0.8
+            extendDepo.setPosition(0.62);//0.595
+        }
+
+
+        public void colorTelmetry() {
+            telemetry.addData("red", "%.2f", redValue);
+            telemetry.addData("blue", "%.2f", blueValue);
+        }
+
+        public Attachments(@NonNull HardwareMap hardwareMap) {
+            //Intake
+            tiltDepo = hardwareMap.get(Servo.class, "tiltDepo");
+            extendDepo = hardwareMap.get(Servo.class, "extendDepo");
+            hort = hardwareMap.get(DcMotorEx.class, "extension");
+            intake = hardwareMap.get(DcMotorEx.class, "intake");
+
+            intakeTilt = hardwareMap.get(Servo.class, "intakeTilt");
+            claw = hardwareMap.get(Servo.class, "claw");
+            wristClaw = hardwareMap.get(Servo.class, "wristClaw");
+            wristClaw = hardwareMap.get(Servo.class, "wristClaw");
+
+            //Slides
+            rightLift = hardwareMap.get(DcMotorEx.class, "rightVert");
+            leftLift = hardwareMap.get(DcMotorEx.class, "leftVert");
+
+
+            rightLift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            leftLift.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+
+            //Limit-Switches
+            vertLimit = hardwareMap.get(TouchSensor.class, "vertSwitch");
+            hortLimit = hardwareMap.get(TouchSensor.class, "hortSwitch");
+
+            //colorChute = hardwareMap.get(ColorSensor.class, "colorChute");
+            blockDetect = hardwareMap.get(ColorSensor.class, "blockDetect");
+
+            rightLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            leftLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+            hort.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+            hort.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+            // Set motors to run using encoders
+            rightLift.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            leftLift.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+            leftLift.setDirection(DcMotor.Direction.REVERSE);
+
+            intakeReset();
+            resetPos();
+
+        }
+
+
+        public class LiftUp implements Action {
+            private boolean initialized = false;
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+
+                double pos = rightLift.getCurrentPosition();
+
+                telemetry.addData("Slide Encoder Position", pos);
+                telemetry.update();
+                sleep(100);
+
+                if (pos < sampleDeposit) {
+
+                    rightLift.setPower(1);
+                    leftLift.setPower(1);
+                    telemetry.addData("Slides:", "Reached pos");
+                    telemetry.update();
+                    return true;
+
+                } else {
+
+                    rightLift.setPower(0.13);
+                    leftLift.setPower(0.13);
+
+                    /*
+                     rightLift.setPower(0.13);
+                     leftLift.setPower(-0.13);
+                     */
+                    rightLift.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    leftLift.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+                    return false;
+                }
+
+
+            }
+        }
+
+        public Action liftUp() {
+
+            return new LiftUp();
+        }
+
+        public class LiftReset implements Action {
+            private boolean initialized = false;
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+
+                if (!vertLimit.isPressed()) {
+                    rightLift.setPower(-0.8);
+                    leftLift.setPower(-0.8);
+
+                    return true;
+
+                } else {
+                    rightLift.setPower(0);
+                    leftLift.setPower(0);
+
+                    rightLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    leftLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+                    rightLift.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                    leftLift.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+                    return false;
+                }
+
+
+            }
+        }
+
+        public Action liftReset() {
+
+            return new LiftReset();
+        }
+
+        public class LiftDownClip implements Action {
+            private boolean initialized = false;
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+
+
+                rightLift.setPower(-1);
+                leftLift.setPower(-1);
+                sleep(700);
+                rightLift.setPower(0);
+                leftLift.setPower(0);
+
+                return false;
+            }
+
+
+        }
+
+
+        public Action liftDownClip() {
+
+            return new LiftDownClip();
+        }
+
+
+
+        // within the Claw class
+        public class CloseClaw implements Action {
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                closeClaw();
+                return false;
+            }
+        }
+
+        public Action closeClaw() {
+
+            return new CloseClaw();
+        }
+
+        public class OpenClaw implements Action {
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                //edit
+                openClaw();
+                //sleep(500);
+
+                return false;
+            }
+        }
+
+        public Action openClaw() {
+
+            return new OpenClaw();
+        }
+
+
+        public class DepoReset implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                resetPos();
+                return false;
+            }
+        }
+
+        public Action depoReset() {
+
+            return new DepoReset();
+
+        }
+
+        public class DepoUp implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                depoCeiling();
+                sleep(200);
+                return false;
+            }
+        }
+
+        public Action depoUp() {
+
+            return new DepoUp();
+
+        }
+
+        public class DepoSample implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                depositPos();
+                sleep(500);
+                return false;
+            }
+        }
+
+        public Action depoSample() {
+
+            return new DepoSample();
+
+        }
+
+        public class ClipPos implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                specPos();
+                return false;
+            }
+        }
+
+        public Action clipPos() {
+
+            return new ClipPos();
+
+        }
+
+        public class DepoSpecPick implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+
+                depoSpecPick();
+
+                return false;
+            }
+        }
+
+        public Action depoSpecPick() {
+
+            return new DepoSpecPick();
+
+        }
+
+        public class ExtendHort implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                intakeReset();
+                telemetry.addData("hort Encoder Position", extendPos);
+
+                if (Math.abs(hort.getCurrentPosition()) < extendPos){
+                    telemetry.addData("hort Encoder Position", extendPos);
+                    telemetry.update();
+                    intakeReset();
+                    hort.setPower(-1);
+                    return true;
+                }
+                else {
+                    hort.setPower(0);
+                    return false;
+                }
+
+            }
+
+        }
+
+
+        public Action extendHort() {
+
+            return new ExtendHort();
+        }
+
+        public class retractHorizontal implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+
+                if (!hortLimit.isPressed()) {
+                    holdChute.setPosition(0.105);
+                    hort.setPower(1);
+                    return true;
+                } else {
+                    holdChute.setPosition(0.46);
+                    hort.setPower(0);
+                    telemetry.addData("Hort","Retracted");
+                    telemetry.update();
+
+
+                    hort.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+
+
+                    return false;
+
+
+                }
+            }
+        }
+
+        public Action RetractHorizontal() {
+
+            return new retractHorizontal();
+        }
+
+
+        public class IntakeThaThang implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                intakePickPos();
+                intake.setPower(-1);
+                sleep(900);
+
+                return false;
+
+
+            }
+        }
+
+        public Action intakeThaThang() {
+
+            return new IntakeThaThang();
+        }
+
+
+        public class ResetThaThang implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                intakeReset();
+                return false;
+            }
+
+
+        }
+
+        public Action resetThaThang() {
+
+            return new ResetThaThang();
+        }
+
+
+        public class SpitThaThang implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+
+
+                intakeSpit();
+                intake.setPower(1);
+                sleep(650);
+
+
+                return false;
+
+
+            }
+        }
+
+        public Action spitThaThang() {
+
+            return new SpitThaThang();
+        }
+
+
+
+        public class intakeOff implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+
+
+                intakeReset();
+                intake.setPower(0);
+                return false;
+
+
+            }
+        }
+
+        public Action IntakeOff() {
+
+            return new intakeOff();
+        }
+
+
+        public class slideStall implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                sleep(1000);
+                return false;
+
+
+            }
+        }
+
+        public Action slideStall() {
+
+            return new slideStall();
+        }
+
+    }
+
+    @Override
+    public void runOpMode() {
+
+
+        Pose2d initialPose = new Pose2d(-45, -65, Math.toRadians(0));
+        MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
+        Attachments attachments = new Attachments(hardwareMap);
+
+
+        TrajectoryActionBuilder preLoad = drive.actionBuilder(initialPose).fresh()
+
+                .setTangent(Math.toRadians(145))
+                //.lineToX(-40)
+                .lineToXLinearHeading(-56, Math.toRadians(45));
+
+
+        //  .lineToYLinearHeading(-56, Math.toRadians(45));
+
+        TrajectoryActionBuilder basketAlign = preLoad.endTrajectory().fresh()
+                .setTangent(Math.toRadians(215))
+                .lineToYLinearHeading(-59,Math.toRadians(45));
+
+        TrajectoryActionBuilder miniMove = basketAlign.endTrajectory().fresh()
+                .lineToYLinearHeading(-57,Math.toRadians(45));
+
+        TrajectoryActionBuilder Cycle1 = miniMove.endTrajectory().fresh()
+
+                .setTangent(Math.toRadians(75)) //70
+                .lineToYLinearHeading(-53, Math.toRadians(77));
+
+        //intake
+
+
+        TrajectoryActionBuilder Cycle1Back = Cycle1.endTrajectory().fresh()
+                .setTangent(Math.toRadians(215))
+                .lineToYLinearHeading(-57,Math.toRadians(45));
+
+
+
+
+        TrajectoryActionBuilder Cycle2 = Cycle1Back.endTrajectory().fresh()
+
+                .setTangent(Math.toRadians(110)) //135
+                .lineToYLinearHeading(-53, Math.toRadians(85));
+
+
+        TrajectoryActionBuilder Cycle2Back = Cycle2.endTrajectory().fresh()
+                .setTangent(Math.toRadians(110))
+                .lineToYLinearHeading(-57, Math.toRadians(45));
+
+        TrajectoryActionBuilder Cycle3 = Cycle2Back.endTrajectory().fresh()
+                .setTangent(Math.toRadians(115)) //135
+                .lineToYLinearHeading(-50, Math.toRadians(110));
+
+        TrajectoryActionBuilder Cycle3Back = Cycle3.endTrajectory().fresh()
+                .lineToYLinearHeading(-56, Math.toRadians(90));
+
+
+
+
+
+        // .turn(Math.toRadians(-80));
+
+        /*
+
+
+        TrajectoryActionBuilder Cycle3 = Cycle2.endTrajectory().fresh()
+                //block 3
+                .turn(Math.toRadians(70))
+                .lineToX(45)
+                //intake
+                .turn(Math.toRadians(-70));
+
+
+        TrajectoryActionBuilder Cycle1Pick = Cycle3.endTrajectory().fresh()
+                .setTangent(180)
+                .splineTo(new Vector2d(45, -70), Math.toRadians(180));
+
+         */
+
+        /*
+        Actions.runBlocking(
+                new SequentialAction(
+                        attachments.closeClaw(),
+                        attachments.depoSample(),
+                        attachments.extendHort()
+                )
+
+        );
+
+         */
+
+
+        //Run this in the Init to Check All the Attachments. I made it all sequential so you know what to each action does.
+        //Fix anything thats screwed.
+        //Adjust the transfer if needed
+        Actions.runBlocking(
+                new SequentialAction(
+                        attachments.depoReset(),
+                        attachments.openClaw(),
+                        attachments.extendHort(),
+                        attachments.intakeThaThang(),
+                        attachments.resetThaThang(),
+                        attachments.RetractHorizontal(),
+                        attachments.closeClaw(),
+                        attachments.depoSample(),
+                        attachments.openClaw(),
+                        attachments.depoReset(),
+                        attachments.extendHort(),
+                        attachments.liftReset()
+
+                )
+
+        );
+
+
+
+        waitForStart();
+
+        if (isStopRequested()) return;
+        Actions.runBlocking(
+                new SequentialAction(
+                        new ParallelAction(
+                                attachments.liftUp(),
+                                preLoad.build()
+
+                        ),
+
+                        new SequentialAction(
+                                attachments.depoSample(),
+                                basketAlign.build(),
+                                attachments.openClaw(),
+                                miniMove.build()
+
+
+
+
+                        ),
+
+                        new ParallelAction(
+                                attachments.liftReset(),
+                                attachments.depoReset(),
+                                Cycle1.build(),
+
+                                attachments.liftReset(),
+                                attachments.extendHort()
+
+
+
+                        ),
+
+
+                        new SequentialAction(
+                                attachments.intakeThaThang(),
+                                attachments.IntakeOff(),
+                                Cycle1Back.build()
+                                /*
+                              Cycle3Back.build()*/
+
+                                //   attachments.intakeThaThang(),
+                                //    attachments.IntakeOff(),
+                                //    attachments.RetractHorizontal()
+                        ),
+
+
+                        new SequentialAction(
+
+                                Cycle2.build(),
+                                attachments.depoSample(),
+                                Cycle2Back.build(),
+                                attachments.depoReset(),
+                                Cycle3.build()
+
+                                // attachments.RetractHorizontal()
+                                //  attachments.IntakeOff()
+                        ),
+
+                        new SequentialAction(
+                                //   attachments.closeClaw(),
+                                //   attachments.liftUp(),
+                                //  attachments.depoSample(),
+                                //   attachments.openClaw()
+                                //   attachments.openClaw()
+
+                        )
+
+
+                )
+        );
+
+    }
+
+}
