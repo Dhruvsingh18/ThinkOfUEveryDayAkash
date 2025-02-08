@@ -30,7 +30,7 @@ public class LeagueQualDrive extends LinearOpMode {
 
     private DcMotor frontLeft, backLeft, frontRight, backRight, extension;
     private DcMotor intake, rightVerticalMotor, leftVerticalMotor;
-    private Servo extendDepo, tiltDepo, claw, leftHang, rightHang, holdChute, intakeTilt, wristClaw;
+    private Servo extendDepo, tiltDepo, claw, leftHanger, rightHanger, holdChute, intakeTilt, wristClaw;
     private TouchSensor vertSwitch, hortSwitch;
     private ColorSensor colorChute;
 
@@ -43,6 +43,7 @@ public class LeagueQualDrive extends LinearOpMode {
     boolean transferStall = false;
     boolean TransferSlide = false;
     boolean sampleMotor = false;
+
     long currentTime = 0;
 
 
@@ -69,8 +70,8 @@ public class LeagueQualDrive extends LinearOpMode {
         claw = hardwareMap.servo.get("claw");
         holdChute = hardwareMap.servo.get("holdChute");
 
-        //leftHang = hardwareMap.servo.get("leftHang");
-        //rightHang = hardwareMap.servo.get("rightHang");
+        leftHanger = hardwareMap.servo.get("leftHang");
+        rightHanger = hardwareMap.servo.get("rightHang");
 
         intakeTilt = hardwareMap.servo.get("intakeTilt");
         wristClaw = hardwareMap.servo.get("wristClaw");
@@ -97,11 +98,11 @@ public class LeagueQualDrive extends LinearOpMode {
         //intakeReset();
 
         intakeReset();
-
         holdChute.setPosition(0.41);
         CloseClaw();
         //OpenClaw();
-
+        leftHanger.setPosition(0.5);
+        rightHanger.setPosition(0.5);
         intakeTilt.setPosition(0.5);
         //resetPos();
 
@@ -175,6 +176,21 @@ public class LeagueQualDrive extends LinearOpMode {
                 //0.5
             }
 
+            //Todo: Hangers
+
+            if (gamepad1.a) {
+                leftHanger.setPosition(1);
+                rightHanger.setPosition(0);
+
+            }
+            else if (gamepad1.b){
+                leftHanger.setPosition(0.4);
+                rightHanger.setPosition(0.6);
+
+
+
+            }
+
 
             //Todo: Intake
 
@@ -207,17 +223,17 @@ public class LeagueQualDrive extends LinearOpMode {
 
             }
 
+            if (gamepad2.x) {
+                CloseClaw();
+            }
+
+
             if (gamepad2.y && !dropStall) {
                 depositPos();
                 currentTime = System.currentTimeMillis();
                 dropStall = true;
 
             }
-
-            if (gamepad2.x) {
-                CloseClaw();
-            }
-
             if (dropStall) {
 
                 if (System.currentTimeMillis() - currentTime > 700) {
@@ -234,10 +250,27 @@ public class LeagueQualDrive extends LinearOpMode {
             boolean vertUp = gamepad2.right_trigger > 0.3;
             boolean vertDown = gamepad2.left_trigger > 0.3;
 
+
+
             if (vertDown) {
+
                 rightVerticalMotor.setPower(-1);
                 leftVerticalMotor.setPower(1);
+                resetPos();
+                
 
+                /*
+                if(leftHanger.getPosition() == 0.4 && rightHanger.getPosition() == 0.6) {
+                    rightVerticalMotor.setPower(-0.3);
+                    leftVerticalMotor.setPower(0.3);
+                }
+
+                else {
+                    rightVerticalMotor.setPower(-1);
+                    leftVerticalMotor.setPower(1);
+                }
+
+                 */
 
             } else if (vertUp) {
                 rightVerticalMotor.setPower(1);
@@ -262,7 +295,7 @@ public class LeagueQualDrive extends LinearOpMode {
 
             } else if (BackwardHort) { //forwards
                 extension.setPower(-1);
-                intakeReset();
+                intakeSpit();
             } else {
                 extension.setPower(0); //Todo: Consider pressing it in
 
@@ -408,7 +441,7 @@ public class LeagueQualDrive extends LinearOpMode {
 
     public void intakeSpit() {
 
-        intakeTilt.setPosition(0.49);//0.61
+        intakeTilt.setPosition(0.6);//0.61
     } //0.71
 
 
@@ -447,7 +480,7 @@ public class LeagueQualDrive extends LinearOpMode {
     }
 
     public void resetPos() {
-        tiltDepo.setPosition(0.116);//0.11
+        tiltDepo.setPosition(0.1);//0.105
         wristClaw.setPosition(0.79); //0.8
         extendDepo.setPosition(0.62);//0.595
     }
