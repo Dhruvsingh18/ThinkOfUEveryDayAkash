@@ -2,11 +2,6 @@ package org.firstinspires.ftc.teamcode.Opmodes;
 
 import android.text.method.Touch;
 
-import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
-import com.acmerobotics.roadrunner.Pose2d;
-import com.acmerobotics.roadrunner.PoseVelocity2d;
-import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.ColorSensor;
@@ -17,14 +12,8 @@ import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.teamcode.Autos.SpecAuto;
-import org.firstinspires.ftc.teamcode.Drawing;
-import org.firstinspires.ftc.teamcode.MecanumDrive;
-import org.firstinspires.ftc.teamcode.TankDrive;
-import org.firstinspires.ftc.teamcode.tuning.TuningOpModes;
 
-//#Todo: Slides are still pushing down and restricting other movements
-@TeleOp(name = "IBeFreshAsHellRockingPrada", group = "TeleOp")
+@TeleOp(name = "LeagueQualDrive", group = "TeleOp")
 
 public class LeagueQualDrive extends LinearOpMode {
 
@@ -40,9 +29,11 @@ public class LeagueQualDrive extends LinearOpMode {
     boolean dropStall = false;
     boolean upPos = false;
     boolean slideDown = false;
-    boolean transferStall = false;
-    boolean TransferSlide = false;
     boolean sampleMotor = false;
+
+    boolean transferStall = false;
+    boolean closeDelay = false;
+    boolean runIntake = false;
 
     long currentTime = 0;
 
@@ -100,17 +91,13 @@ public class LeagueQualDrive extends LinearOpMode {
         intakeReset();
         holdChute.setPosition(0.41);
         CloseClaw();
-        //OpenClaw();
         leftHanger.setPosition(0.5);
         rightHanger.setPosition(0.5);
         intakeTilt.setPosition(0.5);
-        //resetPos();
 
 
         waitForStart();
         while (opModeIsActive()) {
-            //robotCentricMovementController();
-            //LocalizerController();
             tankMecanumMovementController();
 
 
@@ -120,61 +107,9 @@ public class LeagueQualDrive extends LinearOpMode {
             VertTelemetry();
             EncoderTelemetry();
 
-            //Todo: Claw Logic
 
-            double pos = extension.getCurrentPosition() * -1;
-            telemetry.addData("Extension Encoder Position", pos);
-            telemetry.update();
+            //0.5
 
-
-            //Todo: Transfer Logic
-            if (!hortSwitch.isPressed()) {
-                OpenClaw();
-            }
-
-            /*
-            if (hortSwitch.isPressed()) {
-                CloseClaw();
-            }
-
-             */
-
-            //Pushes Slides Down All the Way or Change it so that slides continously push Down
-
-            /*
-            if (vertSwitch.isPressed() && !TransferSlide) {
-                currentTime = System.currentTimeMillis();
-                TransferSlide = true;
-
-            }
-
-            if (TransferSlide) {
-
-                if (System.currentTimeMillis() - currentTime < 600) {
-                    rightVerticalMotor.setPower(-0.7);
-                    leftVerticalMotor.setPower(0.7);
-                    TransferSlide = false;
-                }
-            }
-
-             */
-
-            if (hortSwitch.isPressed()) {
-                holdChute.setPosition(0.46);//0.58
-
-                telemetry.addData("Transfer:", "Ready");
-                telemetry.update();
-
-            } else {
-                telemetry.addData("Transfer:", "Not Ready");
-                telemetry.update();
-                holdChute.setPosition(0.105);//0.13
-
-
-
-
-                //0.5
-            }
 
             //Todo: Hangers
 
@@ -182,22 +117,13 @@ public class LeagueQualDrive extends LinearOpMode {
                 leftHanger.setPosition(1);
                 rightHanger.setPosition(0);
 
-            }
-            else if (gamepad1.b){
+            } else if (gamepad1.b) {
                 leftHanger.setPosition(0.4);
                 rightHanger.setPosition(0.6);
 
 
-
             }
-
-
-            //Todo: Intake
-
-            if (gamepad2.a) {
-                intake.setPower(-1);
-                intakePickPos();
-                //intakeDown();
+            //intakeDown();
 
                 /*
                 if(redValue > blueValue){
@@ -215,16 +141,78 @@ public class LeagueQualDrive extends LinearOpMode {
                 }
 
                  */
-            } else if (gamepad2.b) {
-                intake.setPower(1);
-                intakeSpit();
-            } else {
-                intake.setPower(0);
+
+
+            //Todo: Transfer Logic
+
+            if (!hortSwitch.isPressed()) {
+                OpenClaw();
+            }
+
+
+            if (hortSwitch.isPressed() && !transferStall && !closeDelay && !runIntake) {
+
+                currentTime = System.currentTimeMillis();
+                transferStall = true;
+                closeDelay = true;
+                runIntake = true;
+
+                telemetry.addData("Transfer:", "Ready");
+                telemetry.update();
+
+            } else if(!hortSwitch.isPressed()) {
+                telemetry.addData("Transfer:", "Not Ready");
+                telemetry.update();
+                holdChute.setPosition(0.105);//0.13
+
+                runIntake = false;
+
+
+            }
+
+            if (transferStall) {
+
+                if (System.currentTimeMillis() - currentTime > 1100) {
+                    holdChute.setPosition(0.46);
+                    transferStall = false;
+                }
+
+            } else if (closeDelay) {
+
+                if (System.currentTimeMillis() - currentTime > 750) {
+                    CloseClaw();
+                    closeDelay = false;
+                }
 
             }
 
             if (gamepad2.x) {
                 CloseClaw();
+            }
+
+            //Todo: Intake
+
+            if (gamepad2.a) {
+                intake.setPower(-1);
+                intakePickPos();
+                runIntake = false;
+
+            }
+            else if (gamepad2.b) {
+                intake.setPower(1);
+                intakeSpit();
+                runIntake = false;
+            }
+            else if (runIntake) {  // Only run this if manual input is not detected
+                if (System.currentTimeMillis() - currentTime < 1000) {
+                    intake.setPower(-1);
+                } else {
+                    intake.setPower(0);
+                    runIntake = false;
+                }
+
+            } else {
+                intake.setPower(0);
             }
 
 
@@ -243,7 +231,6 @@ public class LeagueQualDrive extends LinearOpMode {
             }
 
 
-
             //Todo: Verts
 
 
@@ -251,13 +238,12 @@ public class LeagueQualDrive extends LinearOpMode {
             boolean vertDown = gamepad2.left_trigger > 0.3;
 
 
-
             if (vertDown) {
 
                 rightVerticalMotor.setPower(-1);
                 leftVerticalMotor.setPower(1);
                 resetPos();
-                
+
 
                 /*
                 if(leftHanger.getPosition() == 0.4 && rightHanger.getPosition() == 0.6) {
@@ -418,6 +404,7 @@ public class LeagueQualDrive extends LinearOpMode {
         }
     }
 
+
     //Todo: Attachment Methods
 
     public void intakeDown() {
@@ -480,9 +467,9 @@ public class LeagueQualDrive extends LinearOpMode {
     }
 
     public void resetPos() {
-        tiltDepo.setPosition(0.1);//0.105
+        tiltDepo.setPosition(0.11);//0.105
         wristClaw.setPosition(0.79); //0.8
-        extendDepo.setPosition(0.62);//0.595
+        extendDepo.setPosition(0.64);//0.595
     }
 
     public void getColor() {
@@ -629,49 +616,5 @@ public class LeagueQualDrive extends LinearOpMode {
         }
     }
 
-    private void LocalizerController() {
-        if (TuningOpModes.DRIVE_CLASS.equals(MecanumDrive.class)) {
-            MecanumDrive drive = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
 
-
-
-            //while (opModeIsActive()) {
-                drive.setDrivePowers(new PoseVelocity2d(
-                        new Vector2d(
-                                -gamepad1.left_stick_y,
-                                -gamepad1.left_stick_x
-                        ),
-                        (-gamepad1.right_stick_x * 0.6)
-                ));
-
-                drive.updatePoseEstimate();
-
-                Pose2d pose = drive.localizer.getPose();
-                telemetry.addData("x", pose.position.x);
-                telemetry.addData("y", pose.position.y);
-                telemetry.addData("heading (deg)", Math.toDegrees(pose.heading.toDouble()));
-                telemetry.update();
-
-                TelemetryPacket packet = new TelemetryPacket();
-                packet.fieldOverlay().setStroke("#3F51B5");
-                Drawing.drawRobot(packet.fieldOverlay(), pose);
-                FtcDashboard.getInstance().sendTelemetryPacket(packet);
-           // }
-        } else if (TuningOpModes.DRIVE_CLASS.equals(TankDrive.class)) {
-            TankDrive drive = new TankDrive(hardwareMap, new Pose2d(0, 0, 0));
-
-           // while (opModeIsActive()) {
-                drive.setDrivePowers(new PoseVelocity2d(
-                        new Vector2d(
-                                -gamepad1.left_stick_y,
-                                0.0
-                        ),
-                        -gamepad1.right_stick_x
-                ));
-
-           // }
-
-
-        }
-    }
 }
