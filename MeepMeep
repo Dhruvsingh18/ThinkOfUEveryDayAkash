@@ -1,0 +1,45 @@
+
+                .setTangent(90)
+                .lineToY(-33)
+                .lineToY(-38)
+
+                //DROP SPECIMEN
+                .setTangent(0)
+                .splineTo(new Vector2d(38, -10), Math.PI / 2)
+                .setTangent(Math.toRadians(180))
+
+                //Todo: block 1
+                .lineToX(44) // mine is 48
+                .setTangent(Math.toRadians(90))
+                .lineToY(-54)
+                .lineToY(-10)
+
+                //Todo: block 2
+                .setTangent(Math.toRadians(180))
+                .lineToX(54)
+                .setTangent(Math.toRadians(90))
+                .lineToY(-54)
+                .lineToY(-10)
+
+                /*
+
+                //Todo: block 3
+                .setTangent(Math.toRadians(180))
+                .lineToX(63)
+                .setTangent(Math.toRadians(90))
+                .lineToY(-58)
+
+                //Todo: Pick Up
+                .setTangent(Math.toRadians(180))
+                .lineToXLinearHeading(37,Math.PI / 2)
+                .setTangent(Math.toRadians(90))
+                .lineToY(-60)
+                .waitSeconds(1)
+
+                //Todo: Deposit 1
+                .splineTo(new Vector2d(-4, -33), Math.PI / 2)
+
+                //Todo: Deposit 1
+                .splineTo(new Vector2d(-4, -33), Math.PI / 2)
+
+                 */
