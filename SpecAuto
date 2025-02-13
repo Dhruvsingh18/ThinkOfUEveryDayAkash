@@ -504,11 +504,19 @@ public class SpecAuto extends LinearOpMode {
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
         Attachments attachments = new Attachments(hardwareMap);
 
+        VelConstraint baseVelConstraint = (robotPose, _path, _disp) -> {
+            if (robotPose.position.x.value() > 24.0) {
+                return 20.0;  // Limit speed when x > 24
+            } else {
+                return 50.0;  // Allow higher speed otherwise
+            }
+        };
+
         // .lineToY(-45, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-20,20));
 
         TrajectoryActionBuilder preLoad = drive.actionBuilder(initialPose).fresh()
 
-                .setTangent(90)
+                .setTangent(Math.toRadians(90))
                 .lineToY(-33);
 
 
@@ -516,7 +524,7 @@ public class SpecAuto extends LinearOpMode {
         TrajectoryActionBuilder routePos = preLoad.endTrajectory().fresh()
                 .lineToY(-38)
                 //DROP SPECIMEN
-                .setTangent(0)
+                .setTangent(Math.toRadians(0))
                 .splineTo(new Vector2d(38, -10), Math.PI / 2)
                 .setTangent(Math.toRadians(180));
 
@@ -538,14 +546,6 @@ public class SpecAuto extends LinearOpMode {
 
                 .lineToY(-10);
 
-        VelConstraint baseVelConstraint = (robotPose, _path, _disp) -> {
-            if (robotPose.position.x.value() > 24.0) {
-                return 20.0;  // Limit speed when x > 24
-            } else {
-                return 50.0;  // Allow higher speed otherwise
-            }
-        };
-
         //Todo: block 3
         TrajectoryActionBuilder cycle3 = cycle2.endTrajectory().fresh()
                 .setTangent(Math.toRadians(180))
@@ -554,6 +554,7 @@ public class SpecAuto extends LinearOpMode {
                 .lineToY(-58/*,baseVelConstraint*/);
 
 
+        /*
         //Todo: Pick Up
         TrajectoryActionBuilder pick1 = cycle3.endTrajectory().fresh()
                 .setTangent(Math.toRadians(180))
@@ -568,15 +569,8 @@ public class SpecAuto extends LinearOpMode {
                 //Todo: Deposit 1
                 .splineTo(new Vector2d(-4, -33), Math.PI / 2, new TranslationalVelConstraint(50.0));
 
-        Actions.runBlocking(
-                new SequentialAction(
-                        attachments.depoReset(),
-                        attachments.closeClaw()
 
-
-                )
-
-        );
+         */
 
         waitForStart();
 
@@ -587,9 +581,9 @@ public class SpecAuto extends LinearOpMode {
                         routePos.build(),
                         cycle1.build(),
                         cycle2.build(),
-                        cycle3.build(),
-                        pick1.build(),
-                        deposit1.build()
+                        cycle3.build()
+                        //pick1.build(),
+                        //deposit1.build()
                 )
         );
 
