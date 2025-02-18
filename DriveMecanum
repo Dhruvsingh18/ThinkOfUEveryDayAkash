@@ -13,9 +13,9 @@ import com.qualcomm.robotcore.hardware.TouchSensor;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
-@TeleOp(name = "LeagueQualDrive", group = "TeleOp")
+@TeleOp(name = "tankLeagueQualDrive", group = "TeleOp")
 
-public class LeagueQualDrive extends LinearOpMode {
+public class tankLeagueQualDrive extends LinearOpMode {
 
     private DcMotor frontLeft, backLeft, frontRight, backRight, extension;
     private DcMotor intake, rightVerticalMotor, leftVerticalMotor;
@@ -95,10 +95,13 @@ public class LeagueQualDrive extends LinearOpMode {
         rightHanger.setPosition(0.5);
         intakeTilt.setPosition(0.5);
 
+        tiltDepo.setPosition(0);
+
 
         waitForStart();
         while (opModeIsActive()) {
             tankMecanumMovementController();
+            //robotCentricMovementController();
 
 
             //Todo: Telemetry of Sensors, Encoders, etc
@@ -147,15 +150,20 @@ public class LeagueQualDrive extends LinearOpMode {
 
             if (!hortSwitch.isPressed()) {
                 OpenClaw();
+                holdChute.setPosition(0.105);
+            }
+            else if(hortSwitch.isPressed()) {
+                holdChute.setPosition(0.46);
             }
 
 
-            if (hortSwitch.isPressed() && !transferStall && !closeDelay && !runIntake) {
+
+            /*
+            if (hortSwitch.isPressed() && !transferStall && !closeDelay) {
 
                 currentTime = System.currentTimeMillis();
                 transferStall = true;
                 closeDelay = true;
-                runIntake = true;
 
                 telemetry.addData("Transfer:", "Ready");
                 telemetry.update();
@@ -169,6 +177,8 @@ public class LeagueQualDrive extends LinearOpMode {
 
 
             }
+
+             */
 
             if (transferStall) {
 
@@ -202,14 +212,6 @@ public class LeagueQualDrive extends LinearOpMode {
                 intake.setPower(1);
                 intakeSpit();
                 runIntake = false;
-            }
-            else if (runIntake) {  // Only run this if manual input is not detected
-                if (System.currentTimeMillis() - currentTime < 1000) {
-                    intake.setPower(-1);
-                } else {
-                    intake.setPower(0);
-                    runIntake = false;
-                }
 
             } else {
                 intake.setPower(0);
@@ -275,13 +277,14 @@ public class LeagueQualDrive extends LinearOpMode {
 
             if (ForwardHort) { //actually backwards
                 extension.setPower(1);
-                //intakeReset();
+                //intakeSpit();
                 backPos();
 
 
             } else if (BackwardHort) { //forwards
                 extension.setPower(-1);
                 intakeSpit();
+                //backPos();
             } else {
                 extension.setPower(0); //Todo: Consider pressing it in
 
@@ -302,7 +305,7 @@ public class LeagueQualDrive extends LinearOpMode {
 
                 slideDown = true;
 
-            } else if (vertSpecHang && !depoHang && !depoSwing && vertSwitch.isPressed()) {
+            } else if (vertSpecHang && !depoHang &&  !depoSwing && vertSwitch.isPressed()) {
 
                 CloseClaw();
 
@@ -419,11 +422,12 @@ public class LeagueQualDrive extends LinearOpMode {
 
     public void intakePickPos() {
 
-        intakeTilt.setPosition(0.32);//0.61
+        intakeTilt.setPosition(0.45);//0.61
     }
 
     public void backPos(){
-        intakeTilt.setPosition(0.45);
+
+        intakeTilt.setPosition(0.55);
     }
 
     public void intakeSpit() {
@@ -434,42 +438,41 @@ public class LeagueQualDrive extends LinearOpMode {
 
     public void OpenClaw() {
 
-        claw.setPosition(0.6);;//0.42
+        claw.setPosition(0.2);
     }
 
     public void CloseClaw() {
 
-        claw.setPosition(0.15);
-    }
-
-    public void specPos() {
-        tiltDepo.setPosition(0.1);//0.07
-        wristClaw.setPosition(0.82); //0.8
-        extendDepo.setPosition(0.63);//0.645
+        claw.setPosition(0.8);
     }
 
     public void depoUp() {
         extendDepo.setPosition(0.71);
-        tiltDepo.setPosition(0.49);
+        tiltDepo.setPosition(0.17);
 
-    }
-
-    public void depositPos() {
-        tiltDepo.setPosition(0.7);
-        extendDepo.setPosition(0.71);
-        //wristClaw.setPosition(0.4);
     }
 
     public void pickSpecPos() {
-        tiltDepo.setPosition(0.825);
+        tiltDepo.setPosition(0.24);
         extendDepo.setPosition(0.93);
         wristClaw.setPosition(0.0);
     }
 
+    public void specPos() {
+        tiltDepo.setPosition(0.04);
+        extendDepo.setPosition(0.93);
+        wristClaw.setPosition(0.79);
+    }
+
     public void resetPos() {
-        tiltDepo.setPosition(0.11);//0.105
+        tiltDepo.setPosition(0.0);//0.11
         wristClaw.setPosition(0.79); //0.8
-        extendDepo.setPosition(0.64);//0.595
+        extendDepo.setPosition(0.655);//0.625
+    }
+
+    public void depositPos() {
+        tiltDepo.setPosition(0.22);
+        extendDepo.setPosition(0.71);
     }
 
     public void getColor() {
@@ -572,7 +575,7 @@ public class LeagueQualDrive extends LinearOpMode {
 
         double forwardsInput = gamepad1.left_stick_y; //negative bf
         double sidewaysInput = -gamepad1.left_stick_x;
-        double steeringInput = gamepad1.right_stick_x;
+        double steeringInput = -gamepad1.right_stick_x *0.7;
         double speed = 1;
 
 
