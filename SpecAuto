@@ -762,7 +762,7 @@ public class SpecAuto extends LinearOpMode {
                 .setTangent(Math.toRadians(180))
                 .lineToXLinearHeading(45, Math.toRadians(270))
                 .setTangent(Math.toRadians(90))
-                .lineToYLinearHeading(-75.5, Math.toRadians(270), new TranslationalVelConstraint(20), new ProfileAccelConstraint(-20,20));
+                .lineToYLinearHeading(-76.5, Math.toRadians(270), new TranslationalVelConstraint(20), new ProfileAccelConstraint(-20,20));
 
                 //68.5
 
@@ -791,10 +791,10 @@ public class SpecAuto extends LinearOpMode {
 
         TrajectoryActionBuilder Push1 = PosPush.endTrajectory().fresh()
                 .setTangent(Math.toRadians(90))
-                .lineToYLinearHeading(-78, Math.toRadians(270), new TranslationalVelConstraint(110))
-                .lineToYLinearHeading(-74,Math.toRadians(270),  new TranslationalVelConstraint(110))
+                .lineToYLinearHeading(-89, Math.toRadians(270), new TranslationalVelConstraint(110))
+                .lineToYLinearHeading(-86,Math.toRadians(270),  new TranslationalVelConstraint(110))
                 .waitSeconds(2)
-                .lineToYLinearHeading(-80,Math.toRadians(270),  new TranslationalVelConstraint(20));
+                .lineToYLinearHeading(-84,Math.toRadians(270),  new TranslationalVelConstraint(20));
 
         //.lineToY(-60, new TranslationalVelConstraint(20));
                 //.lineToY(-10, new TranslationalVelConstraint(110))
