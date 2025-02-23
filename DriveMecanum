@@ -88,14 +88,15 @@ public class tankLeagueQualDrive extends LinearOpMode {
 
         //intakeReset();
 
-        intakeReset();
-        holdChute.setPosition(0.41);
-        CloseClaw();
+        intakeInit();
+
+        //holdChute.setPosition(0.41);
+        // CloseClaw();
         leftHanger.setPosition(0.5);
         rightHanger.setPosition(0.5);
-        intakeTilt.setPosition(0.5);
+        //intakeTilt.setPosition(0.5);
 
-        tiltDepo.setPosition(0);
+        //tiltDepo.setPosition(0);
 
 
         waitForStart();
@@ -196,7 +197,7 @@ public class tankLeagueQualDrive extends LinearOpMode {
 
             }
 
-            if (gamepad2.x) {
+            if (gamepad2.x && !dropStall) {
                 CloseClaw();
             }
 
@@ -218,19 +219,28 @@ public class tankLeagueQualDrive extends LinearOpMode {
             }
 
 
+            if (gamepad2.y){
+                OpenClaw();
+            }
+            /*
             if (gamepad2.y && !dropStall) {
-                depositPos();
                 currentTime = System.currentTimeMillis();
                 dropStall = true;
 
             }
             if (dropStall) {
 
-                if (System.currentTimeMillis() - currentTime > 700) {
+                if (System.currentTimeMillis() - currentTime > 1400) {
                     OpenClaw();
                     dropStall = false;
                 }
-            }
+
+             */
+
+                if(gamepad2.x){
+                    CloseClaw();
+                }
+
 
 
             //Todo: Verts
@@ -283,7 +293,7 @@ public class tankLeagueQualDrive extends LinearOpMode {
 
             } else if (BackwardHort) { //forwards
                 extension.setPower(-1);
-                intakeSpit();
+                backPos();
                 //backPos();
             } else {
                 extension.setPower(0); //Todo: Consider pressing it in
@@ -378,7 +388,7 @@ public class tankLeagueQualDrive extends LinearOpMode {
                 }
             } else if (upPos) {
                 if (System.currentTimeMillis() - currentTime > 400) {
-                    depoUp();
+                    depositPos();
                     upPos = false;
                 }
             } else if (sampleMotor) {
@@ -417,17 +427,23 @@ public class tankLeagueQualDrive extends LinearOpMode {
 
     public void intakeReset() {
 
-        intakeTilt.setPosition(0.4);
+        intakeTilt.setPosition(0.65);
     }
+
 
     public void intakePickPos() {
 
-        intakeTilt.setPosition(0.45);//0.61
+        intakeTilt.setPosition(0.54);//0.61
+    }
+
+    public void intakeInit() {
+
+        intakeTilt.setPosition(0.8);
     }
 
     public void backPos(){
 
-        intakeTilt.setPosition(0.55);
+        intakeTilt.setPosition(0.7);
     }
 
     public void intakeSpit() {
