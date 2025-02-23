@@ -4,12 +4,13 @@ import androidx.annotation.NonNull;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
+import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.ProfileAccelConstraint;
 import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
 import com.acmerobotics.roadrunner.TranslationalVelConstraint;
 import com.acmerobotics.roadrunner.Vector2d;
-import com.acmerobotics.roadrunner.VelConstraint;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -22,12 +23,17 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.TouchSensor;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 @Config
-@Autonomous(name = "Godspeed", group = "Autonomous")
+@Autonomous(name = "GODSPEED", group = "Autonomous")
 public class SpecAuto extends LinearOpMode {
 
-    final int sampleDeposit = 2500;
+    final int sampleDeposit = 1110;
+    final int sampleDeposit1 = 1110 - 100;
+    final int liftUpP1 = 1100;
+
+    final int specPickupLiftPos = -925;
     final int extendPos = 1000;
     final int postHangPos = 520;
     final int preHangPos = 200;
@@ -46,9 +52,14 @@ public class SpecAuto extends LinearOpMode {
         private long intakeStartTime;
         private static final long INTAKE_RUN_TIME = 2000;
 
+        public void intakeDown() {
+
+            intakeTilt.setPosition(0.55);
+        }
+
         public void intakeReset() {
 
-            intakeTilt.setPosition(0.57);//0.65
+            intakeTilt.setPosition(0.5);
         }
 
         public void intakePickPos() {
@@ -56,51 +67,57 @@ public class SpecAuto extends LinearOpMode {
             intakeTilt.setPosition(0.45);//0.61
         }
 
+        public void backPos(){
+
+            intakeTilt.setPosition(0.55);
+        }
+
         public void intakeSpit() {
-            intakeTilt.setPosition(0.71);//0.61
+
+            intakeTilt.setPosition(0.6);//0.61
+        } //0.71
+
+
+        public void clawOpen() {
+
+            claw.setPosition(0.12);
         }
 
+        public void clawClose() {
 
-        public void OpenClaw() {
-
-            claw.setPosition(0.46); //0.42
-        }
-
-        public void CloseClaw() {
-
-            claw.setPosition(0.15);
-        }
-
-        public void specPos() {
-            extendDepo.setPosition(0.44);
-            tiltDepo.setPosition(0.12);//0.12
-            wristClaw.setPosition(0.8);
+            claw.setPosition(0.8);
         }
 
         public void depoCeiling() {
             extendDepo.setPosition(0.71);
-            tiltDepo.setPosition(0.43);
+            tiltDepo.setPosition(0.17);
 
+        }
+
+        public void specPickup() {
+            tiltDepo.setPosition(0.24);
+            extendDepo.setPosition(0.9);
+            wristClaw.setPosition(0.79); //0.8
+        }
+
+        public void specPos() {
+            tiltDepo.setPosition(0.04);
+            extendDepo.setPosition(0.93);
+            wristClaw.setPosition(0.79);
+        }
+
+        public void resetPos() {
+            tiltDepo.setPosition(0.02);//0.11
+            wristClaw.setPosition(0.79); //0.8
+            extendDepo.setPosition(0.5);//0.655
 
         }
 
         public void depositPos() {
-            tiltDepo.setPosition(0.65);
+            tiltDepo.setPosition(0.22);
             extendDepo.setPosition(0.71);
-            //wristClaw.setPosition(0.4);
         }
 
-        public void pickSpecPos() {
-            tiltDepo.setPosition(0.8);
-            extendDepo.setPosition(0.93);
-            wristClaw.setPosition(0);
-        }
-
-        public void resetPos() {
-            tiltDepo.setPosition(0.07);//0.07
-            wristClaw.setPosition(0.82); //0.8
-            extendDepo.setPosition(0.63);//0.645
-        }
 
         public void colorTelmetry() {
             telemetry.addData("red", "%.2f", redValue);
@@ -143,11 +160,33 @@ public class SpecAuto extends LinearOpMode {
 
             leftLift.setDirection(DcMotor.Direction.REVERSE);
 
+            backPos();
             intakeReset();
-            resetPos();
+            //resetPos();
 
         }
+        public class PostLiftUp implements Action {
+            private boolean initialized = false;
 
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+
+                    rightLift.setPower(1);
+                    leftLift.setPower(1);
+                    sleep(500);
+                    rightLift.setPower(0);
+                    leftLift.setPower(0);
+                    telemetry.addData("Slides:", "Reached pos");
+                    telemetry.update();
+
+                    return false;
+            }
+        }
+
+        public Action postLiftUp() {
+
+            return new PostLiftUp();
+        }
 
         public class LiftUp implements Action {
             private boolean initialized = false;
@@ -161,7 +200,7 @@ public class SpecAuto extends LinearOpMode {
                 telemetry.update();
                 sleep(100);
 
-                if (pos < postHangPos) {
+                if (pos < sampleDeposit) {
 
                     rightLift.setPower(1);
                     leftLift.setPower(1);
@@ -178,6 +217,9 @@ public class SpecAuto extends LinearOpMode {
                      rightLift.setPower(0.13);
                      leftLift.setPower(-0.13);
                      */
+                    rightLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    leftLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
                     rightLift.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
                     leftLift.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
@@ -193,15 +235,117 @@ public class SpecAuto extends LinearOpMode {
             return new LiftUp();
         }
 
-        public class LiftReset implements Action {
+        public class LiftUpDep1 implements Action {
             private boolean initialized = false;
 
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
 
+                double pos = rightLift.getCurrentPosition();
+
+                telemetry.addData("Slide Encoder Position", pos);
+                telemetry.update();
+                sleep(100);
+
+                if (pos < sampleDeposit1) {
+
+                    rightLift.setPower(1);
+                    leftLift.setPower(1);
+                    telemetry.addData("Slides:", "Reached pos");
+                    telemetry.update();
+                    return true;
+
+                } else {
+
+                    rightLift.setPower(0.13);
+                    leftLift.setPower(0.13);
+
+                    /*
+                     rightLift.setPower(0.13);
+                     leftLift.setPower(-0.13);
+                     */
+                    rightLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    leftLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+                    rightLift.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    leftLift.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+                    return false;
+                }
+
+
+            }
+        }
+
+        public Action liftUpDep1() {
+
+            return new LiftUpDep1();
+        }
+
+        public class SpecLift implements Action {
+            private boolean initialized = false;
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+
+                double pos = rightLift.getCurrentPosition();
+
+                telemetry.addData("Slide Encoder Position", pos);
+                telemetry.update();
+                sleep(100);
+
+                if (pos > specPickupLiftPos) {
+
+                    rightLift.setPower(-1);
+                    leftLift.setPower(-1);
+                    telemetry.addData("Slides:", "Reached pos");
+                    telemetry.update();
+                    return true;
+
+                } else {
+
+                    rightLift.setPower(0.13);
+                    leftLift.setPower(0.13);
+
+                    /*
+                     rightLift.setPower(0.13);
+                     leftLift.setPower(-0.13);
+                     */
+
+                    rightLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    leftLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+                    rightLift.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                    leftLift.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+
+                    return false;
+                }
+
+
+            }
+        }
+
+        public Action specLift() {
+
+            return new SpecLift();
+        }
+
+        public class LiftReset implements Action {
+            private boolean initialized = false;
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                rightLift.setPower(-1);
+                leftLift.setPower(-1);
+                sleep(500);
+
+                rightLift.setPower(0);
+                leftLift.setPower(0);
+
+
                 if (!vertLimit.isPressed()) {
-                    rightLift.setPower(-0.4);
-                    leftLift.setPower(-0.4);
+                    rightLift.setPower(-1);
+                    leftLift.setPower(-1);
 
                     return true;
 
@@ -216,6 +360,9 @@ public class SpecAuto extends LinearOpMode {
                     leftLift.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
                     return false;
+
+
+
                 }
 
 
@@ -234,11 +381,12 @@ public class SpecAuto extends LinearOpMode {
             public boolean run(@NonNull TelemetryPacket packet) {
 
 
-                rightLift.setPower(-1);
-                leftLift.setPower(-1);
-                sleep(700);
+                rightLift.setPower(-0.7);
+                leftLift.setPower(-0.7);
+                sleep(1300);
                 rightLift.setPower(0);
                 leftLift.setPower(0);
+                claw.setPosition(0.46);
 
                 return false;
             }
@@ -252,13 +400,83 @@ public class SpecAuto extends LinearOpMode {
             return new LiftDownClip();
         }
 
+        public class VertReset implements Action {
+            private boolean initialized = false;
+            private ElapsedTime timer = new ElapsedTime();
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                if (!initialized) {
+                    timer.reset();
+                    initialized = true;
+                }
+
+                double elapsedTime = timer.milliseconds();
+
+                if (elapsedTime < 1300) {
+                    rightLift.setPower(-0.7);
+                    leftLift.setPower(-0.7);
+                } else {
+                    rightLift.setPower(0);
+                    leftLift.setPower(0);
+                    claw.setPosition(0.46);
+
+                    rightLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                    leftLift.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+
+                    rightLift.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                    leftLift.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                    return false; // Action complete
+                }
+
+                return true; // Continue running
+            }
+        }
+
+        public Action vertReset() {
+            return new VertReset();
+        }
+        public class MyReset implements Action {
+            private boolean initialized = false;
+            private long startTime;
+            private final long duration = 2000; // Default duration in milliseconds
+            private final double liftPower = -1; // Default lift power
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                if (!initialized) {
+                    // Initialize the action
+                        rightLift.setPower(-0.7);
+                        leftLift.setPower(-0.7);
+                    }
+
+                    startTime = System.currentTimeMillis();
+                    initialized = true;
+
+                // Check if the elapsed time has exceeded the duration
+                if (System.currentTimeMillis() - startTime >= duration) {
+                    // Stop the lift motors
+                    rightLift.setPower(0);
+                    leftLift.setPower(0);
+                    return true;
+                }
+
+                // Action is still running
+                return false;
+            }
+        }
+
+        // Method to create the MyReset action
+        public Action myReset() {
+            return new MyReset();
+        }
 
 
         // within the Claw class
         public class CloseClaw implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                claw.setPosition(0.15);
+                clawClose();
                 return false;
             }
         }
@@ -272,7 +490,7 @@ public class SpecAuto extends LinearOpMode {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
                 //edit
-                claw.setPosition(0.36);
+                clawOpen();
 
                 return false;
             }
@@ -350,10 +568,7 @@ public class SpecAuto extends LinearOpMode {
             @Override
             public boolean run(@NonNull TelemetryPacket telemetryPacket) {
 
-                tiltDepo.setPosition(0.8);
-                extendDepo.setPosition(0.87);
-                wristClaw.setPosition(0);
-                sleep(1600);
+                specPickup();
 
                 return false;
             }
@@ -375,9 +590,9 @@ public class SpecAuto extends LinearOpMode {
                 sleep(1200);
                 return false;
 
-                }
-
             }
+
+        }
 
 
         public Action extendHort() {
@@ -442,7 +657,7 @@ public class SpecAuto extends LinearOpMode {
             }
 
 
-            }
+        }
 
         public Action resetThaThang() {
 
@@ -493,6 +708,24 @@ public class SpecAuto extends LinearOpMode {
             return new intakeOff();
         }
 
+        public class sleepRobot implements Action {
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket telemetryPacket) {
+                telemetry.addData("sleep", "sl");
+                telemetry.update();
+                sleep(2000);
+                return false;
+
+
+            }
+        }
+
+        public Action sleepRobot() {
+
+            return new sleepRobot();
+        }
+
     }
 
 
@@ -500,135 +733,232 @@ public class SpecAuto extends LinearOpMode {
     public void runOpMode() {
 
 
-        Pose2d initialPose = new Pose2d(10, -65, Math.toRadians(90));
+        Pose2d initialPose = new Pose2d(10, -65, Math.toRadians(270));
         MecanumDrive drive = new MecanumDrive(hardwareMap, initialPose);
         Attachments attachments = new Attachments(hardwareMap);
 
-        VelConstraint baseVelConstraint = (robotPose, _path, _disp) -> {
-            if (robotPose.position.x.value() > 24.0) {
-                return 20.0;  // Limit speed when x > 24
-            } else {
-                return 50.0;  // Allow higher speed otherwise
-            }
-        };
-
-        // .lineToY(-45, new TranslationalVelConstraint(20), new ProfileAccelConstraint(-20,20));
 
         TrajectoryActionBuilder preLoad = drive.actionBuilder(initialPose).fresh()
 
-                .setTangent(Math.toRadians(90))
-                .lineToY(-33);
+
+                .setTangent(Math.toRadians(110))
+                //  .lineToY(-35)
+
+                .lineToYLinearHeading(-45, Math.toRadians(270), new TranslationalVelConstraint(20), new ProfileAccelConstraint(-20,20));
 
 
-        //Todo: Preposition for push
-        TrajectoryActionBuilder routePos = preLoad.endTrajectory().fresh()
-                .lineToY(-38)
-                //DROP SPECIMEN
-                .setTangent(Math.toRadians(0))
-                .splineTo(new Vector2d(38, -10), Math.PI / 2)
-                .setTangent(Math.toRadians(180));
+        TrajectoryActionBuilder FirstPickup =  preLoad.endTrajectory().fresh()
 
-        //Todo: block 1
-        TrajectoryActionBuilder cycle1 = routePos.endTrajectory().fresh()
-                .lineToX(44) // mine is 48
-                .setTangent(Math.toRadians(90))
+                /*
+                //could be commented out
+                .setTangent(Math.toRadians(100))
+                .lineToYLinearHeading(-45, Math.toRadians(270), new TranslationalVelConstraint(20), new ProfileAccelConstraint(-20,20))
 
-                //Todo: Apply Acceleration Constraints for Push. Make sure to revert velocity(overide with null)
-                .lineToY(-54)
-                .lineToY(-10);
 
-        //Todo: block 2
-        TrajectoryActionBuilder cycle2 = cycle1.endTrajectory().fresh()
+                 */
+                .setTangent(Math.toRadians(100))
+                .lineToYLinearHeading(-57, Math.toRadians(270), new TranslationalVelConstraint(20), new ProfileAccelConstraint(-20,20))
+
                 .setTangent(Math.toRadians(180))
-                .lineToX(54)
+                .lineToXLinearHeading(45, Math.toRadians(270))
                 .setTangent(Math.toRadians(90))
-                .lineToY(-54)
+                .lineToYLinearHeading(-75.5, Math.toRadians(270), new TranslationalVelConstraint(20), new ProfileAccelConstraint(-20,20));
 
-                .lineToY(-10);
+                //68.5
 
-        //Todo: block 3
-        TrajectoryActionBuilder cycle3 = cycle2.endTrajectory().fresh()
+        TrajectoryActionBuilder FirstDeposit = FirstPickup.endTrajectory().fresh()
+                .setTangent(Math.toRadians(90))
+                .splineTo(new Vector2d(12,-61), Math.toRadians(90))//86 bf
+                .setTangent(Math.toRadians(90))
+
+                .lineToYLinearHeading(-55, Math.toRadians(270)); //-44
+                //.lineToYLinearHeading(-39, Math.toRadians(270));
+
+        TrajectoryActionBuilder PosPush = FirstDeposit.endTrajectory().fresh()
+
+
+                .setTangent(Math.toRadians(90))
+                .lineToYLinearHeading(-58, Math.toRadians(270))
+
                 .setTangent(Math.toRadians(180))
-                .lineToX(63)
-                .setTangent(Math.toRadians(90))
-                .lineToY(-58/*,baseVelConstraint*/);
 
+                .lineToXLinearHeading(47, Math.toRadians(270))// mine is 48
+
+                .setTangent(Math.toRadians(90))
+
+                .splineTo(new Vector2d(49, -20), Math.toRadians(90));
+
+
+        TrajectoryActionBuilder Push1 = PosPush.endTrajectory().fresh()
+                .setTangent(Math.toRadians(90))
+                .lineToYLinearHeading(-78, Math.toRadians(270), new TranslationalVelConstraint(110))
+                .lineToYLinearHeading(-74,Math.toRadians(270),  new TranslationalVelConstraint(110))
+                .waitSeconds(2)
+                .lineToYLinearHeading(-80,Math.toRadians(270),  new TranslationalVelConstraint(20));
+
+        //.lineToY(-60, new TranslationalVelConstraint(20));
+                //.lineToY(-10, new TranslationalVelConstraint(110))
+
+        TrajectoryActionBuilder Deposit2 = Push1.endTrajectory().fresh()
+
+                .setTangent(Math.toRadians(90))
+
+                .lineToY(-84, new TranslationalVelConstraint(20))
+
+
+                .setTangent(Math.toRadians(270))
+
+                .lineToYLinearHeading(-70, Math.toRadians(270))
+
+                /*
+                .setTangent(Math.toRadians(180))
+
+                .lineToXLinearHeading(20, Math.toRadians(270))
+
+                .setTangent(Math.toRadians(90))
+
+                .lineToYLinearHeading(-50,Math.toRadians(270));
+
+                 */
+                .setTangent(Math.toRadians(90))
+                .splineTo(new Vector2d(20,-65), Math.toRadians(87));
 
         /*
-        //Todo: Pick Up
-        TrajectoryActionBuilder pick1 = cycle3.endTrajectory().fresh()
+        TrajectoryActionBuilder Push2 = Push1.endTrajectory().fresh()
+
                 .setTangent(Math.toRadians(180))
-                .lineToXLinearHeading(37,Math.PI / 2)
+                .lineToX(56, new TranslationalVelConstraint(110)) // mine is 48
                 .setTangent(Math.toRadians(90))
-                .lineToY(-60,
-        new TranslationalVelConstraint(10.0))
-                .waitSeconds(1);
+                .lineToY(-58, new TranslationalVelConstraint(110))
+                .lineToY(-10, new TranslationalVelConstraint(110));
 
+        TrajectoryActionBuilder Push3 = Push2.endTrajectory().fresh()
+                //block 3
+                .setTangent(Math.toRadians(180))-
+                .lineToX(65, new TranslationalVelConstraint(110))
+                .setTangent(Math.toRadians(90))
+                .lineToY(-58, new TranslationalVelConstraint(110));
 
-        TrajectoryActionBuilder deposit1 = pick1.endTrajectory().fresh()
-                //Todo: Deposit 1
-                .splineTo(new Vector2d(-4, -33), Math.PI / 2, new TranslationalVelConstraint(50.0));
-
+        TrajectoryActionBuilder Park = Push3.endTrajectory().fresh()
+                .splineTo(new Vector2d(28, -10), Math.toRadians(90));
 
          */
+
+
+
+        Actions.runBlocking(
+                new SequentialAction(
+                        attachments.depoSpecPick(),
+                        attachments.closeClaw()
+                        //attachments.vertReset()
+
+                        //attachments.depoReset()
+
+
+                )
+
+        );
+
+
 
         waitForStart();
 
         if (isStopRequested()) return;
         Actions.runBlocking(
                 new SequentialAction(
-                        preLoad.build(),
-                        routePos.build(),
-                        cycle1.build(),
-                        cycle2.build(),
-                        cycle3.build()
-                        //pick1.build(),
-                        //deposit1.build()
-                )
-        );
+                        new ParallelAction(
+                        attachments.liftUp(),
+                        preLoad.build()
+                                )
+
+                        ));
 
         /*
         Actions.runBlocking(
                 new SequentialAction(
-                new ParallelAction(
-                        preLoad.build(),
-                        attachments.liftUp(),
-                        attachments.clipPos(),
+                        attachments.liftUp()
+                ));
 
-                        new SequentialAction(
-                                attachments.openClaw()
-                        )
+         */
 
-
-                        ),
-
+        Actions.runBlocking(
                 new SequentialAction(
-                        attachments.liftDownClip(),
-                        routePos.build(),
-                        cycle1.build(),
-                        cycle2.build(),
-                        cycle3.build()
+                        attachments.postLiftUp(),
+                        attachments.openClaw(),
 
-                ),
-
-                new ParallelAction(
-                        attachments.depoSpecPick(),
-                        pick1.build()
-                ),
-
-                new SequentialAction(
-                        attachments.closeClaw(),
                         new ParallelAction(
-                                attachments.liftUp(),
-                                attachments.clipPos(),
-                                deposit1.build()
+                                FirstPickup.build(),
+                                attachments.depoReset(),
+                                attachments.vertReset()
+                                ),
+
+                        //attachments.liftReset(),
+                        //attachments.vertReset(),
+        attachments.closeClaw(),
+
+                        new ParallelAction(
+                                attachments.liftUpDep1(),
+                                attachments.depoSpecPick(),
+                                FirstDeposit.build()
                         ),
-                        attachments.closeClaw()
-                )
+
+                        attachments.postLiftUp(),
+                        attachments.openClaw(),
+
+
+                        PosPush.build(),
+                        new ParallelAction(
+                                attachments.depoReset(),
+                                attachments.vertReset(),
+                                Push1.build()
+                        ),
+
+                        attachments.liftReset(),
+                        attachments.closeClaw(),
+
+                        new ParallelAction(
+                                attachments.liftUpDep1(),
+                                attachments.depoSpecPick(),
+                                Deposit2.build()
+                        ),
+                        attachments.postLiftUp()
+
+                        /*
+                        Push2.build(),
+                        Push3.build(),
+                        Park.build()
+
+                         */
+
+
+                ));
+
+        /*
+        Actions.runBlocking(
+
+                new SequentialAction(
+                        new ParallelAction(
+                                FirstDeposit.build(),
+                                attachments.liftUp()
+
+                        ),
+
+                attachments.postLiftUp(),
+                attachments.openClaw(),
+
                 )
         );
 
          */
+
+
+
+
+
+
+
+
+
 
     }
 
