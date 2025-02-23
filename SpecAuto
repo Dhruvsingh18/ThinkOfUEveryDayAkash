@@ -757,7 +757,7 @@ public class SpecAuto extends LinearOpMode {
 
                  */
                 .setTangent(Math.toRadians(100))
-                .lineToYLinearHeading(-57, Math.toRadians(270), new TranslationalVelConstraint(20), new ProfileAccelConstraint(-20,20))
+                .lineToYLinearHeading(-60, Math.toRadians(270), new TranslationalVelConstraint(20), new ProfileAccelConstraint(-20,20))
 
                 .setTangent(Math.toRadians(180))
                 .lineToXLinearHeading(45, Math.toRadians(270))
@@ -768,7 +768,7 @@ public class SpecAuto extends LinearOpMode {
 
         TrajectoryActionBuilder FirstDeposit = FirstPickup.endTrajectory().fresh()
                 .setTangent(Math.toRadians(90))
-                .splineTo(new Vector2d(12,-61), Math.toRadians(90))//86 bf
+                .splineTo(new Vector2d(6,-61), Math.toRadians(90))//86 bf
                 .setTangent(Math.toRadians(90))
 
                 .lineToYLinearHeading(-55, Math.toRadians(270)); //-44
